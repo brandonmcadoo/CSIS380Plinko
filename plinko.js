@@ -30,7 +30,7 @@ window.onload = function init() {
     //  Configure WebGL
 
     gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.clearColor(0.1, 1.0, 0.8, 1.0);
+    gl.clearColor(0.0, 0.0, 0.0, 0.50);
 
     //  Load shaders and initialize attribute buffers
 
@@ -140,6 +140,11 @@ window.onload = function init() {
     for (var i = 0; i < displayBall.positions.length; i++) {
         gl.bufferSubData(gl.ARRAY_BUFFER, 16 * (i + (recs.length * recs[0].positions.length) + (pegs.length * pegs[0].positions.length)), flatten(displayBall.color));
     }
+    for (var i = 0; i < balls.length; i++) {
+        for (var j = 0; j < balls[i].positions.length; j++) {
+            gl.bufferSubData(gl.ARRAY_BUFFER, 16 * ((j) + (recs.length * recs[0].positions.length) + (pegs.length * pegs[0].positions.length) + (displayBall.positions.length) + (i * displayBall.positions.length)), flatten(balls[i].color));
+        }
+    }
 
     canvas.addEventListener("mousemove", (event) => {
 
@@ -214,7 +219,7 @@ function makeBall(c) {
             r * Math.cos(i * 2.0 * Math.PI / triangle_count) + c[0],
             r * Math.sin(i * 2.0 * Math.PI / triangle_count) + c[1]));
     }
-    let col = vec4(1.0, 1.0, 1.0, 1.0);
+    let col = vec4(0.5, 1.0, 1.0, 1.0);
     return { color: col, center: c, radius: r, positions: p, dropping: drop, xOffset: xOff, yOffset: yOff };
 }
 
@@ -347,9 +352,11 @@ function render() {
                     balls[i].radius * Math.sin(j * 2.0 * Math.PI / triangle_count) + 0.95));
             }
         }
-        checkPegCollision(balls[i]);
-        checkWallCollision(balls[i]);
-        checkRecsCollision(balls[i]);
+        if(balls[i].dropping){
+            checkPegCollision(balls[i]);
+            checkWallCollision(balls[i]);
+            checkRecsCollision(balls[i]);
+        }
     }
     updateBuffer();
 
