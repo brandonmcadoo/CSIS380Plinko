@@ -1,26 +1,26 @@
 "use strict";
 
+/*Global Variables*/
 var canvas;
 var gl;
 var vBuffer;
 var cBuffer;
-var ball;
-var peg;
 var triangle_count = 204;
 var maxPoints = 15000000;
+var mousePos;
+var ballNum = 4;
+var clickNum = 0;
+var gravity = .0000001;
 
+/*Object Decleration and Arrays*/
+var ball;
+var peg;
 var pegs = [];
 var recs = [];
 var displayBall;
 var balls = [];
 
-var mousePos;
-
-var ballNum = 4;
-var clickNum = 0;
-
-var gravity = .0000001;
-
+/*Color Declerations*/
 let ballColor;
 let pegColor;
 let recColor;
@@ -32,23 +32,19 @@ window.onload = function init() {
     if (!gl) { alert("WebGL 2.0 isn't available"); }
 
     //  Configure WebGL
-
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clearColor(0.0, 0.0, 0.0, 0.50);
 
     //  Load shaders and initialize attribute buffers
-
     var program = initShaders(gl, "vertex-shader", "fragment-shader");
     gl.useProgram(program);
 
     // Load the data into the GPU
-
     vBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, 8 * maxPoints, gl.STATIC_DRAW);
 
     // Associate out shader variable with our data buffer
-
     var positionLoc = gl.getAttribLocation(program, "aPosition");
     gl.vertexAttribPointer(positionLoc, 2, gl.FLOAT, false, 0, 0);
     gl.enableVertexAttribArray(positionLoc);
@@ -63,13 +59,18 @@ window.onload = function init() {
     gl.enableVertexAttribArray(colorLoc);
 
 
-    // ball = makeBall(vec2(0.0, .95));
-    // peg = makePeg(vec2(0.0, 0.0));
-
+    /*
+        Setting the color of objects
+    */
     ballColor =  vec4(0.5, 1.0, 1.0, 1.0);
     pegColor = vec4(0.0, 0.0, 0.0, 1.0);
     recColor = vec4(0.0, 0.0, 0.0, 1.0);
 
+
+    /*
+        Creating arrays of objects
+    */
+    //pegs
     for (var i = 0; i < 4; i++) {
         var y = 0.5;
         var c = vec2(i * 0.3, y);
@@ -77,7 +78,6 @@ window.onload = function init() {
         c = vec2(i * -0.3, y);
         pegs.push(makePeg(c));
     }
-
     for (var i = .5; i < 3.5; i++) {
         var y = 0.2;
         var c = vec2(i * 0.3, y);
@@ -85,7 +85,6 @@ window.onload = function init() {
         c = vec2(i * -0.3, y);
         pegs.push(makePeg(c));
     }
-
     for (var i = 0; i < 4; i++) {
         var y = - 0.1;
         var c = vec2(i * 0.3, y);
@@ -93,7 +92,6 @@ window.onload = function init() {
         c = vec2(i * -0.3, y);
         pegs.push(makePeg(c));
     }
-
     for (var i = .5; i < 3.5; i++) {
         var y = -0.4;
         var c = vec2(i * 0.3, y);
@@ -101,26 +99,24 @@ window.onload = function init() {
         c = vec2(i * -0.3, y);
         pegs.push(makePeg(c));
     }
-
+    //rectangles
     for (var i = .5; i < 3.5; i++) {
         var c = vec2(i * 0.3, -.8);
         recs.push(makeRec(c));
         c = vec2(i * -0.3, -.8);
         recs.push(makeRec(c));
     }
-
+    //balls
     displayBall = makeBall(vec2(0, .95));
-
     for (var i = 0; i < ballNum; i++) {
         balls.push(makeBall(vec2(0, .95)));
     }
 
 
-
-
-
-    // grid = makeGrid();
-    var vBuffStart;
+    /*
+        Creating buffer arrays
+    */
+    //vbuffer
     gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
     for (var i = 0; i < pegs.length; i++) {
         gl.bufferSubData(gl.ARRAY_BUFFER, 8 * (i * (pegs[i].positions.length)), flatten(pegs[i].positions));
@@ -132,8 +128,7 @@ window.onload = function init() {
     for (var i = 0; i < balls.length; i++) {
         gl.bufferSubData(gl.ARRAY_BUFFER, 8 * ((i * balls[i].positions.length) + (pegs.length * pegs[0].positions.length) + (recs.length * recs[0].positions.length) + displayBall.positions.length), flatten(balls[i].positions));
     }
-
-    var cBuffStart;
+    //cbuffer
     gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
     for (var i = 0; i < pegs.length; i++) {
         for (var j = 0; j < pegs[i].positions.length; j++) {
@@ -154,8 +149,12 @@ window.onload = function init() {
         }
     }
 
-    canvas.addEventListener("mousemove", (event) => {
 
+    /*
+        Event listeners
+    */
+    //mouse movement
+    canvas.addEventListener("mousemove", (event) => {
         let xCoordinate = convertX(event.clientX, canvas);
         let yCoordinate = convertY(event.clientY, canvas);
         mousePos = vec2(xCoordinate, yCoordinate)
@@ -183,7 +182,7 @@ window.onload = function init() {
         render();
 
     });
-
+    //mouse click
     canvas.addEventListener("click", (event) => {
         var index = clickNum % ballNum;
         if(balls[index].dropping == false){
@@ -200,14 +199,22 @@ window.onload = function init() {
     render();
 };
 
+
+/*
+    Helper functions
+*/
+//converting clipped coordinates
 function convertX(clickX, canvas) {
     return 2 * clickX / canvas.width - 1;
 }
-
 function convertY(clickY, canvas) {
     return 2 * (canvas.height - clickY) / canvas.height - 1;
 }
-
+//getting random bounce
+function getRandomInt(max) {
+    return Math.floor(Math.random() * max);
+}
+//updating the vbuffer
 function updateBuffer() {
     gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
     gl.bufferSubData(gl.ARRAY_BUFFER, 8 * ((pegs.length * pegs[0].positions.length) + (recs.length * recs[0].positions.length)), flatten(displayBall.positions));
@@ -217,6 +224,10 @@ function updateBuffer() {
 }
 
 
+/*
+    Object constructors
+*/
+//ball
 function makeBall(c) {
     var r = 0.05;
 
@@ -226,7 +237,6 @@ function makeBall(c) {
     var xOff = 0.0;
     var yOff = 0.0;
 
-
     for (var i = 0; i <= triangle_count; i++) {
         p.push(vec2(
             r * Math.cos(i * 2.0 * Math.PI / triangle_count) + c[0],
@@ -235,13 +245,12 @@ function makeBall(c) {
     let col = ballColor;
     return { color: col, center: c, radius: r, positions: p, dropping: drop, xOffset: xOff, yOffset: yOff };
 }
-
+//peg
 function makePeg(c) {
     var r = 0.025;
 
     var p = [];
     p.push(c);
-
 
     for (var i = 0; i <= triangle_count; i++) {
         p.push(vec2(
@@ -251,7 +260,7 @@ function makePeg(c) {
     let col = pegColor;
     return { color: col, center: c, radius: r, positions: p };
 }
-
+//rectangle
 function makeRec(c) {
     var width = .02;
 
@@ -266,6 +275,11 @@ function makeRec(c) {
     return { color: col, center: c, width: width, positions: p };
 }
 
+
+/*
+    Collisions checking
+*/
+//peg
 function checkPegCollision(ball){
     let ballx = ball.positions[0][0];
     let bally = ball.positions[0][1];
@@ -288,17 +302,16 @@ function checkPegCollision(ball){
         i++;
     }
 }
-
+//edge of screen
 function checkWallCollision(ball){
     let ballx = ball.positions[0][0];
-    let bally = ball.positions[0][1];
     let lWall = -0.95;
     let rWall = 0.95;
     if(ballx < lWall || ballx > rWall){
         ball.xOffset *= -1;
     }
 }
-
+//rectangle
 function checkRecsCollision(ball){
     let ballx = ball.positions[0][0];
     let bally = ball.positions[0][1];
@@ -326,34 +339,13 @@ function checkRecsCollision(ball){
     }
 }
 
-function getRandomInt(max) {
-    return Math.floor(Math.random() * max);
-  }
 
-
+/*
+    Rendering/Animation function
+*/
 function render() {
     gl.clear(gl.COLOR_BUFFER_BIT);
-
     gl.bindBuffer(gl.ARRAY_BUFFER, cBuffer);
-
-    // var yChange = .01;
-    // for (var i = 0; i < balls.length; i++) {
-    //     if (balls[i].dropping) {
-    //         for (var j = 0; j < balls[i].positions.length; j++) {
-    //             balls[i].positions[j][1] -= yChange;
-    //         }
-    //     }
-    //     if (balls[i].positions[0][1] <= -1.05) {
-    //         balls[i].dropping = false;
-
-    //         balls[i].positions[0] = vec2(mousePos[0], 0.95);
-    //         for (var j = 0; j <= triangle_count; j++) {
-    //             balls[i].positions[j + 1] = (vec2(
-    //                 balls[i].radius * Math.cos(j * 2.0 * Math.PI / triangle_count) + mousePos[0],
-    //                 balls[i].radius * Math.sin(j * 2.0 * Math.PI / triangle_count) + 0.95));
-    //         }
-    //     }
-    // }
 
     for (let i = 0; i < balls.length; i++) {
         for (let j = 0; j < balls[i].positions.length; j++) {
