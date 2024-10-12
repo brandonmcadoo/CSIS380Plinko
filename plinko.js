@@ -6,7 +6,7 @@ var vBuffer;
 var cBuffer;
 var ball;
 var peg;
-var triangle_count = 200;
+var triangle_count = 204;
 var maxPoints = 15000000;
 
 var pegs = [];
@@ -19,7 +19,11 @@ var mousePos;
 var ballNum = 4;
 var clickNum = 0;
 
-var gravity = .00001;
+var gravity = .0000001;
+
+let ballColor;
+let pegColor;
+let recColor;
 
 window.onload = function init() {
     canvas = document.getElementById("gl-canvas");
@@ -61,6 +65,10 @@ window.onload = function init() {
 
     // ball = makeBall(vec2(0.0, .95));
     // peg = makePeg(vec2(0.0, 0.0));
+
+    ballColor =  vec4(0.5, 1.0, 1.0, 1.0);
+    pegColor = vec4(0.0, 0.0, 0.0, 1.0);
+    recColor = vec4(0.0, 0.0, 0.0, 1.0);
 
     for (var i = 0; i < 4; i++) {
         var y = 0.5;
@@ -172,18 +180,23 @@ window.onload = function init() {
                 }
             }
         }
-        updateBuffer();
         render();
 
     });
 
     canvas.addEventListener("click", (event) => {
         var index = clickNum % ballNum;
-        balls[index].dropping = true;
-        balls[index].yOffset = -.002;
-        clickNum++;
+        if(balls[index].dropping == false){
+            balls[index].dropping = true;
+            balls[index].yOffset = -.0000001;
+            clickNum++;
+        }
+        if(displayBall.dropping == false){
+            displayBall.dropping = true;
+            displayBall.yOffset = -.0000001;
+            clickNum++;
+        }
     });
-    updateBuffer();
     render();
 };
 
@@ -219,7 +232,7 @@ function makeBall(c) {
             r * Math.cos(i * 2.0 * Math.PI / triangle_count) + c[0],
             r * Math.sin(i * 2.0 * Math.PI / triangle_count) + c[1]));
     }
-    let col = vec4(0.5, 1.0, 1.0, 1.0);
+    let col = ballColor;
     return { color: col, center: c, radius: r, positions: p, dropping: drop, xOffset: xOff, yOffset: yOff };
 }
 
@@ -235,7 +248,7 @@ function makePeg(c) {
             r * Math.cos(i * 2.0 * Math.PI / triangle_count) + c[0],
             r * Math.sin(i * 2.0 * Math.PI / triangle_count) + c[1]));
     }
-    let col = vec4(0.0, 0.0, 0.0, 1.0);
+    let col = pegColor;
     return { color: col, center: c, radius: r, positions: p };
 }
 
@@ -249,7 +262,7 @@ function makeRec(c) {
     p.push(vec2(c[0] + width, -1));
     p.push(vec2(c[0] - width, -1));
 
-    let col = vec4(0.0, 0.0, 0.0, 1.0);
+    let col = recColor;
     return { color: col, center: c, width: width, positions: p };
 }
 
@@ -263,11 +276,11 @@ function checkPegCollision(ball){
         pegx = pegs[i].positions[0][0];
         pegy = pegs[i].positions[0][1];
 
-        let changeX = ballx - pegx;
+        let changeX = ballx - pegx + ((getRandomInt(5) - 2) * .0001);
         let changeY = bally - pegy;
         let distance = Math.sqrt((changeX * changeX) + (changeY * changeY));
         if(distance < 0.075){
-            let div = .002 / distance;
+            let div = .0002 / distance;
             ball.xOffset = changeX * div;
             ball.yOffset = changeY * div;
             i = pegs.length;
@@ -290,16 +303,21 @@ function checkRecsCollision(ball){
     let ballx = ball.positions[0][0];
     let bally = ball.positions[0][1];
 
-    if(bally < -0.8){
+    if(bally < -0.74){
         let i = 0;
         while(i < recs.length){
             let leftx = recs[i].positions[0][0]
             let rightx = recs[i].positions[1][0]
     
-            if(ballx <= leftx && ballx >= rightx){
-                ball.yOffset *= -1;
+            if(bally > -0.76){
+                if((ballx + .05) >= leftx && (ballx - .05) <= rightx){
+                    ball.yOffset *= -1  + ((getRandomInt(5) - 2) * .0001);
+                    ball.yOffset -= .0001;
+                    i = recs.length;
+                }
             }
-            if(Math.abs(ballx - leftx) <= .05 || Math.abs(ballx - rightx) <= .05){
+
+            else if((ballx + .05) >= leftx && (ballx - .05) <= rightx){
                 ball.xOffset *= -1;
                 i = recs.length;
             }
@@ -307,6 +325,10 @@ function checkRecsCollision(ball){
         }
     }
 }
+
+function getRandomInt(max) {
+    return Math.floor(Math.random() * max);
+  }
 
 
 function render() {
@@ -335,8 +357,10 @@ function render() {
 
     for (let i = 0; i < balls.length; i++) {
         for (let j = 0; j < balls[i].positions.length; j++) {
-            balls[i].positions[j][0] += balls[i].xOffset;
-            balls[i].positions[j][1] += balls[i].yOffset;
+            if(balls[i].dropping){
+                balls[i].positions[j][0] += balls[i].xOffset;
+                balls[i].positions[j][1] += balls[i].yOffset;
+            }
         }
 
         if (balls[i].positions[0][1] <= -1.05 || balls[i].positions[0][1] >= 1.05 || balls[i].positions[0][0] <= -1.05 || balls[i].positions[0][0] >= 1.05) {
@@ -359,7 +383,9 @@ function render() {
         }
     }
     updateBuffer();
-
+    if(displayBall.dropping){
+        displayBall.yOffset -= gravity;
+    }
     for(let i = 0; i < balls.length; i++){
         if (balls[i].dropping){
             balls[i].yOffset -= gravity;
